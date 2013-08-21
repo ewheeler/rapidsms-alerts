@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import User
-from rapidsms.contrib.locations.models import Location
 from django.conf import settings
 from django.utils.dateformat import format as format_date
 from alerts.importutil import dynamic_import
@@ -16,7 +15,6 @@ class Notification(models.Model):
     text = models.TextField()
     url = models.TextField(null=True, blank=True)
     alert_type = models.CharField(max_length=256) #fully-qualified python name of the corresponding AlertType class
-    originating_location = models.ForeignKey(Location, blank=True, null=True)
 
     sms_text = models.TextField(null=True, blank=True)
 
@@ -96,10 +94,10 @@ class Notification(models.Model):
     def reveal_to_users(self):
         if self.id is None:
             self.save()
-
-        for u in self.users_for_escalation_level(self.escalation_level):
-            nv = NotificationVisibility(notif=self, user=u, esc_level=self.escalation_level)
-            nv.save()
+        if self.users_for_escalation_level(self.escalation_level):
+            for u in self.users_for_escalation_level(self.escalation_level):
+                nv = NotificationVisibility(notif=self, user=u, esc_level=self.escalation_level)
+                nv.save()
 
     def autoescalate_due(self):
         return (self.is_escalable and datetime.utcnow() - self.escalated_on > self.auto_escalation_interval(self.escalation_level))
